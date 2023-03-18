@@ -41,5 +41,10 @@ jobs:
         ./build.sh
     - uses: actions/upload-artifact@v3
       with:
+        name: RUU_signed.nbh
+        path: /home/runner/work/edk2stuff/HtcLeoPkg/ImageResources/RUU_signed.nbh
+
+    - uses: actions/upload-artifact@v3
+      with:
         name: uefi.img
-        path: /home/runner/work/edk2stuff/HtcLeoPkg/uefi.img
+        path: /home/runner/work/edk2stuff/HtcLeoPkg/ImageResources/uefi.img
