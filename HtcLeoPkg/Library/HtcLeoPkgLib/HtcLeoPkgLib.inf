@@ -32,6 +32,7 @@
   IoLib
   MemoryAllocationLib
   SerialPortLib
+  OpsLib
 
 [Sources.common]
   HtcLeoPkg.c

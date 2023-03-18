@@ -16,6 +16,7 @@
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/PcdLib.h>
+#include <Library/ops.h>
 
 #include <Ppi/ArmMpCoreInfo.h>
 
@@ -96,6 +97,59 @@ ArmPlatformInitialize (
 ) {
     return RETURN_SUCCESS;
 }
+/*
+Needed to boot in lk:
+
+  // early arch stuff
+	arch_early_init();
+
+	// do any super early platform initialization
+	platform_early_init();
+
+	// do any super early target initialization
+	target_early_init();
+*/
+
+static void set_vector_base(UINTN addr)
+{
+	__asm__ volatile("mcr	p15, 0, %0, c12, c0, 0" :: "r" (addr));
+}
+
+#define MEMBASE 0x28000000
+
+void arch_early_init(void)
+{
+	/* turn off the cache */
+	arch_disable_cache(UCACHE);
+
+	/* set the vector base to our exception vectors so we dont need to double map at 0 */
+	set_vector_base(MEMBASE);
+
+	//arm_mmu_init(); undefined for now
+
+	//platform_init_mmu_mappings(); undefined for now
+
+	/* turn the cache back on */
+	arch_enable_cache(UCACHE);
+
+	/* enable cp10 and cp11 */
+	UINT32 val;
+	__asm__ volatile("mrc	p15, 0, %0, c1, c0, 2" : "=r" (val));
+	val |= (3<<22)|(3<<20);
+	__asm__ volatile("mcr	p15, 0, %0, c1, c0, 2" :: "r" (val));
+
+	/* set enable bit in fpexc */
+	val = (1<<30);
+	__asm__ volatile("mcr  p10, 7, %0, c8, c0, 0" :: "r" (val));
+}
+
+VOID
+platform_early_init()
+{}
+
+VOID
+target_early_init()
+{}
 
 EFI_STATUS
 PrePeiCoreGetMpCoreInfo (

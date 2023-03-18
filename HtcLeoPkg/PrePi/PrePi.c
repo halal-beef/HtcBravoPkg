@@ -71,6 +71,8 @@ UartInit(VOID)
   CHAR8                       Buffer[100];
   UINTN                       CharCount;
 
+  /* Add flashlight for debugging */
+
   // Initialize the framebuffer
   MmioWrite32(MSM_MDP_BASE1 + 0x90008, FB_ADDR);
   //FbconSetup();

@@ -76,6 +76,15 @@ ASM_FUNC(ArmPlatformPeiBootAction)
   mcr     p15, 0, r0, c1, c0, 0
   bx    lr
 
+ASM_FUNC(ArchEarlyInit)
+  bl  arch_early_init
+
+ASM_FUNC(PlatformEarlyInit)
+  bl  platform_early_init
+
+ASM_FUNC(TargetEarlyInit)
+  bl  target_early_init
+
 //UINTN
 //ArmPlatformGetCorePosition (
 //  IN UINTN MpId
