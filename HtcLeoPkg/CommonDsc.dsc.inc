@@ -73,6 +73,7 @@
   TimerLib|HtcLeoPkg/Library/MsmTargetTimerLib/MsmTargetTimerLib.inf
 
   InterruptsLib|HtcLeoPkg/Library/InterruptsLib/InterruptsLib.inf
+  OpsLib|HtcLeoPkg/Library/OpsLib/OpsLib.inf
 
   UefiDevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
   #
