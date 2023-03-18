@@ -18,6 +18,7 @@
 
 [Sources.common]
   cache-ops.S
+  #ops.S
 
 [Protocols]
   gHardwareInterruptProtocolGuid

@@ -86,17 +86,6 @@ ArmPlatformGetBootMode (
     return BOOT_WITH_FULL_CONFIGURATION;
 }
 
-/**
-  Initialize controllers that must setup in the normal world
-  This function is called by the ArmPlatformPkg/Pei or ArmPlatformPkg/Pei/PlatformPeim
-  in the PEI phase.
-**/
-RETURN_STATUS
-ArmPlatformInitialize (
-    IN  UINTN                     MpId
-) {
-    return RETURN_SUCCESS;
-}
 /*
 Needed to boot in lk:
 
@@ -120,7 +109,7 @@ static void set_vector_base(UINTN addr)
 void arch_early_init(void)
 {
 	/* turn off the cache */
-	arch_disable_cache(UCACHE);
+	//arch_disable_cache(UCACHE);
 
 	/* set the vector base to our exception vectors so we dont need to double map at 0 */
 	set_vector_base(MEMBASE);
@@ -130,7 +119,7 @@ void arch_early_init(void)
 	//platform_init_mmu_mappings(); undefined for now
 
 	/* turn the cache back on */
-	arch_enable_cache(UCACHE);
+	//arch_enable_cache(UCACHE);
 
 	/* enable cp10 and cp11 */
 	UINT32 val;
@@ -149,7 +138,27 @@ platform_early_init()
 
 VOID
 target_early_init()
-{}
+{
+  //cedesmith: write reset vector while we can as MPU kicks in after flash_init();
+	MmioWrite32(0, 0xe3a00546); //mov r0, #0x11800000
+	MmioWrite32(4, 0xe590f004); //ldr	r15, [r0, #4]
+}
+
+/**
+  Initialize controllers that must setup in the normal world
+  This function is called by the ArmPlatformPkg/Pei or ArmPlatformPkg/Pei/PlatformPeim
+  in the PEI phase.
+**/
+RETURN_STATUS
+ArmPlatformInitialize (
+    IN  UINTN                     MpId
+) {
+    arch_early_init();
+    platform_early_init();
+    target_early_init();
+
+    return RETURN_SUCCESS;
+}
 
 EFI_STATUS
 PrePeiCoreGetMpCoreInfo (
