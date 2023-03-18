@@ -54,11 +54,11 @@ int main(int argc, char* argv[])
 	}
 
 	struct stat st;
-	if(stat("lk.bin", &st)!=0){
-		fprintf(stderr, "lk.bin not found\n", argv[1]);
+	if(stat("payload.bin", &st)!=0){
+		fprintf(stderr, "payload.bin not found\n", argv[1]);
 		return 3;
 	}
-	data.parts[0].fileName="lk.bin";
+	data.parts[0].fileName="payload.bin";
 	data.parts[0].start=2;
 	data.parts[0].end=blocks(st.st_size+0x800*2)*64;
 	data.noParts++;
