@@ -124,7 +124,7 @@ void arch_early_init(void)
 	//platform_init_mmu_mappings(); undefined for now
 
 	/* turn the cache back on */
-	//arch_enable_cache(UCACHE);
+	arch_enable_cache(UCACHE);
 
 	/* enable cp10 and cp11 */
 	UINT32 val;
