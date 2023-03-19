@@ -24,33 +24,7 @@
 #define DSB .byte 0x4f, 0xf0, 0x7f, 0xf5
 #define ISB .byte 0x6f, 0xf0, 0x7f, 0xf5
 
-//_Head:
-	/* Set _Entry address */
-//	ldr		r1, _Payload
-
-	/* Jump to the real code */
-//	b		_Start
-
-_StackBase:
-	/* Text Offset */
-	.quad UEFI_BASE
-
-_StackSize:
-	/* Image Size */
-	.quad UEFI_SIZE
-
-.bss
-.align 2
-	/* the abort stack is for unrecoverable errors.
-	 * also note the initial working stack is set to here.
-	 * when the threading system starts up it'll switch to a new 
-	 * dynamically allocated stack, so we don't need it for very long
-	 */
-abort_stack:
-	.skip 1024
-abort_stack_top:
-
-.text
+.section ".text.boot"
 .globl _start
 _start:
 	b	reset
@@ -62,61 +36,80 @@ _start:
 	b	arm_irq
 	b	arm_fiq
 
-#define WSPL_VADDR 0X80000000
+#define WSPL_VADDR 0x80000000
+#define MEMSIZE 0x00200000
 
-//if UEFI is loaded by wince spl add romhdr
 .org 0x40
 	.word 0x43454345
-	.word (romhdr-_start)+WSPL_VADDR		// virtual address of romhdr
-	//.word romhdr+0x96C00000		// virtual address of romhdr
-	.word romhdr-_start				// file address of romhdr
+	.word (romhdr-_start)+WSPL_VADDR	// virtual address of romhdr
+	.word romhdr-_start					// file address of romhdr
 
 .org 0x00000900
 romhdr:
-	.word 0x2000000				// dllfirst
-	.word 0x2000000				// dlllast
+	.word 0x2000000					// dllfirst
+	.word 0x2000000					// dlllast
 	.word WSPL_VADDR				// physfirst
 	.word WSPL_VADDR+(_end-_start)	// physlast
-	.word 0						// nummods (no TOCentry after ROMHDR)
-	.word WSPL_VADDR+(_end-_start) // ulRAMStart
+	.word 0							// nummods (no TOCentry after ROMHDR)
+	.word WSPL_VADDR+(_end-_start) 	// ulRAMStart
 	.word WSPL_VADDR+(_end-_start)	// ulRAMFree
-	.word WSPL_VADDR+MEMSIZE	// ulRAMEnd
-	.word 0						// ulCopyEntries
-	.word 0						// ulCopyOffset
-	.word 0						// ulProfileLen
-	.word 0						// ulProfileOffset
-	.word 0						// numfiles
-	.word 0						// ulKernelFlags
-	.word 0x80808080			// ulFSRamPercent
-	.word 0						// ulDrivglobStart
-	.word 0						// ulDrivglobLen
-	.hword 0x1C2				// usCPUType
-	.hword 0x2					// usMiscFlags
-	.word 0						// pExtensions
-	.word 0						// ulTrackingStart
-	.word 0						// ulTrackingLen
+	.word WSPL_VADDR+MEMSIZE		// ulRAMEnd
+	.word 0							// ulCopyEntries
+	.word 0							// ulCopyOffset
+	.word 0							// ulProfileLen
+	.word 0							// ulProfileOffset
+	.word 0							// numfiles
+	.word 0							// ulKernelFlags
+	.word 0x80808080				// ulFSRamPercent
+	.word 0							// ulDrivglobStart
+	.word 0							// ulDrivglobLen
+	.hword 0x1C2					// usCPUType
+	.hword 0x2						// usMiscFlags
+	.word 0							// pExtensions
+	.word 0							// ulTrackingStart
+	.word 0							// ulTrackingLen
 .org 0x00001000
-
 
 reset:
 	//flashlight to see we get here
-	ldr     r4, =0xa9000864        @ bank6_in (phys)
+/*	ldr     r4, =0xa9000864        @ bank6_in (phys)
 	ldr     r5, =0xa9000814        @ bank6_out (phys)
 	orr     r6, r4, #0x200000      @ 22nd bit for flash
 	str     r6, [r5, #0]           @ store in out (enables bright for 500ms, limited by hardware)
-	
-	/* do some cpu setup */
-	mrc		p15, 0, r0, c1, c0, 0
 
-	/* XXX this is currently for arm926, revist with armv6 cores */	
-    /* new thumb behavior, low exception vectors, i/d cache disable, mmu disabled */
+	/* do some cpu setup */
+
+	mrc		p15, 0, r0, c1, c0, 0
 	bic		r0, r0, #(1<<15| 1<<13 | 1<<12)
 	bic		r0, r0, #(1<<2 | 1<<0)
-	
-    /* enable alignment faults */
 	orr		r0, r0, #(1<<1)
 	mcr		p15, 0, r0, c1, c0, 0
-    
+
+	/* see if we need to relocate */
+	ldr		r1, = .Laddr
+	ldr		r0, = _start
+	sub		r1, r1, r0
+	mov		r0, pc
+	sub		r0, r0, r1 //#(.Laddr - _start)
+.Laddr:
+	str 	r0, load_address
+	ldr		r1, =_start
+	cmp		r0, r1
+	beq		.Lstack_setup
+
+	/* we need to relocate ourselves to the proper spot */
+	ldr		r2, =__data_end	
+
+.Lrelocate_loop:
+	ldr		r3, [r0], #4
+	str		r3, [r1], #4
+	cmp		r1, r2
+	bne		.Lrelocate_loop
+
+	/* we're relocated, jump to the right address */
+	ldr		r0, =.Lstack_setup
+	bx		r0
+
 .ltorg
 
 .global load_address
@@ -180,13 +173,29 @@ load_address:
 	DSB
 	ISB
 
-/*	bl		kmain*/
-/*	b		.*/
-
 .ltorg
 
+.bss
+.align 2
+	/* the abort stack is for unrecoverable errors.
+	 * also note the initial working stack is set to here.
+	 * when the threading system starts up it'll switch to a new 
+	 * dynamically allocated stack, so we don't need it for very long
+	 */
+abort_stack:
+	.skip 1024
+abort_stack_top:
 
+.data
+.align 2
+
+/* define the heap end a variable containing the end defined in the
+ * linker script. this could be updated during init.
+ */
+//.global _heap_end
+//_heap_end:
+//	.int _end_of_ram
+
+.text
 .align 4
-
 _Payload:
-	/* Your code will get ran right after this binary */
