@@ -106,10 +106,15 @@ static void set_vector_base(UINTN addr)
 
 #define MEMBASE 0x28000000
 
+/*void disable_cache(UINTN flags)
+{
+  __asm__ volatile("mrc	p15, 0, %0, c1, c0, 2" : "=r" (val));
+}*/
+
 void arch_early_init(void)
 {
 	/* turn off the cache */
-	//arch_disable_cache(UCACHE);
+	arch_disable_cache(UCACHE);
 
 	/* set the vector base to our exception vectors so we dont need to double map at 0 */
 	set_vector_base(MEMBASE);
