@@ -21,6 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+_Head:
+	/* Set _Entry address */
+	adr		r1, _Payload
+
+	/* Jump to the real code */
+	b		_start
+
+_StackBase:
+	/* Text Offset */
+	.quad UEFI_BASE
+
+_StackSize:
+	/* Image Size */
+	.quad UEFI_SIZE
+
 #define DSB .byte 0x4f, 0xf0, 0x7f, 0xf5
 #define ISB .byte 0x6f, 0xf0, 0x7f, 0xf5
 
@@ -85,20 +100,12 @@ reset:
 	orr		r0, r0, #(1<<1)
 	mcr		p15, 0, r0, c1, c0, 0
 
-	/* see if we need to relocate */
-	ldr		r1, = .Laddr
-	ldr		r0, = _start
-	sub		r1, r1, r0
-	mov		r0, pc
-	sub		r0, r0, r1 //#(.Laddr - _start)
-.Laddr:
-	str 	r0, load_address
-	ldr		r1, =_start
-	cmp		r0, r1
-	beq		.Lstack_setup
 
-	/* we need to relocate ourselves to the proper spot */
-	ldr		r2, =__data_end	
+	/* see if we need to relocate 
+	ldr			r0, =_StackBase
+	cmp			r0, r1
+	beq			.Lstack_setup
+	ldr 		r2, =_StackSize
 
 .Lrelocate_loop:
 	ldr		r3, [r0], #4
