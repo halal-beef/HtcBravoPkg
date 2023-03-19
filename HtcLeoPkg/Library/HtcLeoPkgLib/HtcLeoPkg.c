@@ -17,6 +17,7 @@
 #include <Library/IoLib.h>
 #include <Library/PcdLib.h>
 #include <Library/ops.h>
+#include <Library/arm.h>
 
 #include <Ppi/ArmMpCoreInfo.h>
 
@@ -28,50 +29,6 @@ ARM_CORE_INFO mHiKey960InfoTable[] = {
         // MP Core MailBox Set/Get/Clear Addresses and Clear Value
         (UINT64)0xFFFFFFFF
     },
-    /*
-      {
-        // Cluster 0, Core 1
-        0x001
-        // MP Core MailBox Set/Get/Clear Addresses and Clear Value
-        (UINT64)0xFFFFFFFF
-      },
-      {
-        // Cluster 0, Core 2
-        0x002,
-        // MP Core MailBox Set/Get/Clear Addresses and Clear Value
-        (UINT64)0xFFFFFFFF
-      },
-      {
-        // Cluster 0, Core 3
-        0x003,
-        // MP Core MailBox Set/Get/Clear Addresses and Clear Value
-        (UINT64)0xFFFFFFFF
-      },
-      {
-        // Cluster 1, Core 0
-        0x1, 0x0,
-        // MP Core MailBox Set/Get/Clear Addresses and Clear Value
-        (UINT64)0xFFFFFFFF
-      },
-      {
-        // Cluster 1, Core 1
-        0x1, 0x1,
-        // MP Core MailBox Set/Get/Clear Addresses and Clear Value
-        (UINT64)0xFFFFFFFF
-      },
-      {
-        // Cluster 1, Core 2
-        0x1, 0x2,
-        // MP Core MailBox Set/Get/Clear Addresses and Clear Value
-        (UINT64)0xFFFFFFFF
-      },
-      {
-        // Cluster 1, Core 3
-        0x1, 0x3,
-        // MP Core MailBox Set/Get/Clear Addresses and Clear Value
-        (UINT64)0xFFFFFFFF
-      }
-    */
 };
 
 /**
@@ -106,10 +63,53 @@ static void set_vector_base(UINTN addr)
 
 #define MEMBASE 0x28000000
 
-/*void disable_cache(UINTN flags)
+#define __ALIGNED(x) __attribute__((aligned(x)))
+UINT32 tt[4096] __ALIGNED(16384);
+
+#define MMU_FLAG_CACHED 0x1
+#define MMU_FLAG_BUFFERED 0x2
+#define MMU_FLAG_READWRITE 0x4
+
+#define MB (1024*1024)
+
+void arm_mmu_map_section(UINTN paddr, UINTN vaddr, UINTN flags)
 {
-  __asm__ volatile("mrc	p15, 0, %0, c1, c0, 2" : "=r" (val));
-}*/
+	INTN index;
+	UINTN AP;
+	UINTN CB;
+	UINTN TEX = 0;
+
+	AP = (flags & MMU_FLAG_READWRITE) ? 0x3 : 0x2;
+	CB = ((flags & MMU_FLAG_CACHED) ? 0x2 : 0) | ((flags & MMU_FLAG_BUFFERED) ? 0x1 : 0);
+
+	index = vaddr / MB;
+	// section mapping
+	tt[index] = (paddr & ~(MB-1)) | (TEX << 12) | (AP << 10) | (0<<5) | (CB << 2) | (2<<0);
+
+	arm_invalidate_tlb();
+}
+
+void arm_mmu_init(void)
+{
+	//int i;
+
+	/* set some mmu specific control bits */
+	arm_write_cr1(arm_read_cr1() & ~((1<<29)|(1<<28)|(1<<0))); // access flag disabled, TEX remap disabled, mmu disabled
+
+	/* set up an identity-mapped translation table with cache disabled */
+	//for (i=0; i < 4096; i++) {
+	//	arm_mmu_map_section(i * MB, i * MB,  MMU_FLAG_READWRITE); // map everything uncached
+	//}
+
+	/* set up the translation table base */
+	arm_write_ttbr((UINT32)tt);
+
+	/* set up the domain access register */
+	arm_write_dacr(0x00000001);
+
+	/* turn on the mmu */
+	arm_write_cr1(arm_read_cr1() | 0x1);
+}
 
 void arch_early_init(void)
 {
@@ -119,9 +119,7 @@ void arch_early_init(void)
 	/* set the vector base to our exception vectors so we dont need to double map at 0 */
 	set_vector_base(MEMBASE);
 
-	//arm_mmu_init(); undefined for now
-
-	//platform_init_mmu_mappings(); undefined for now
+	//arm_mmu_init();
 
 	/* turn the cache back on */
 	arch_enable_cache(UCACHE);

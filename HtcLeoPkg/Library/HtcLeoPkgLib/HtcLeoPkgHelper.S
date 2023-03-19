@@ -233,7 +233,25 @@ ASM_FUNC(arch_clean_invalidate_cache_range)
 
 	bx		lr*/
 
+/* uint32_t arm_read_cr1(void) */
+ASM_FUNC(arm_read_cr1)
+	mrc		p15, 0, r0, c1, c0, 0
+	bx		lr
 
+/* void arm_write_cr1(uint32_t val) */
+ASM_FUNC(arm_write_cr1)
+	mcr		p15, 0, r0, c1, c0, 0
+	bx		lr
+
+/* void arm_write_ttbr(uint32_t val) */
+ASM_FUNC(arm_write_ttbr)
+	mcr 	p15, 0, r0, c2, c0, 0
+	bx		lr
+
+/* void arm_write_dacr(uint32_t val) */
+ASM_FUNC(arm_write_dacr)
+	mcr 	p15, 0, r0, c3, c0, 0
+	bx		lr
 
 
 

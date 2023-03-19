@@ -99,6 +99,12 @@ romhdr:
 
 
 reset:
+	//flashlight to see we get here
+	ldr     r4, =0xa9000864        @ bank6_in (phys)
+	ldr     r5, =0xa9000814        @ bank6_out (phys)
+	orr     r6, r4, #0x200000      @ 22nd bit for flash
+	str     r6, [r5, #0]           @ store in out (enables bright for 500ms, limited by hardware)
+	
 	/* do some cpu setup */
 	mrc		p15, 0, r0, c1, c0, 0
 

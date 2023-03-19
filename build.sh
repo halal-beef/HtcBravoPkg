@@ -20,4 +20,4 @@ cd ../
 
 # Create an kernel image for lk boot
 mkbootimg --kernel workspace/Build/QSD8250/DEBUG_GCC5/FV/QSD8250_UEFI.fd --base 0x11800000 --kernel_offset 0x00008000 -o ImageResources/uefi.img
-rm -r workspace/Build
+
